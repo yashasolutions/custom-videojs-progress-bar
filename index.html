@@ -1,91 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Video.js Example</title>
-  <script src="https://vjs.zencdn.net/7.11.4/video.min.js"></script>
-  <link href="https://vjs.zencdn.net/7.11.4/video-js.css" rel="stylesheet" />
+  <link href="https://vjs.zencdn.net/7.14.3/video-js.css" rel="stylesheet" />
   <style>
-    .video-js {
-      width: 600px;
-      height: 400px;
+    .vjs-progress-holder .vjs-play-progress,
+    .vjs-progress-holder .vjs-load-progress {
+      transform-origin: left;
     }
   </style>
 </head>
 <body>
-    <video id="my-video" class="video-js vjs-default-skin" controls>
-        <p class="vjs-no-js">
-        To view this video please enable JavaScript, and consider upgrading to a
-        web browser that
-        <a href="https://videojs.com/html5-video-support/" target="_blank">
-            supports HTML5 video
-        </a>
-        </p>
+  <video id="my-video" class="video-js vjs-default-skin" controls preload="auto" width="640" height="264"
+    data-setup='{}'>
+    <source src="videoplayback.mp4" type="video/mp4">
+    <p class="vjs-no-js">
+      To view this video please enable JavaScript, and consider upgrading to a
+      web browser that
+      <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+    </p>
+  </video>
+
+  <script src="https://vjs.zencdn.net/7.14.3/video.js"></script>
   <script>
-    // Initialize Video.js player
-    var player = videojs('my-video', {
-        controls: true,
-        autoplay: false,
-        preload: 'auto',
-        sources: [{
-            src: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-            type: 'video/mp4'
-        }]
-    });
+    var player = videojs('my-video');
 
-    // Function to limit time range
-    function limitTimeRange() {
-        var startTime = 180; // 3 minutes in seconds
-        var endTime = 240; // 4 minutes in seconds
-        var duration = endTime - startTime;
-
-        player.currentTime(startTime);
-
-        player.on('timeupdate', function() {
-            if (player.currentTime() > endTime) {
-                player.currentTime(startTime);
-                player.pause();
-            }
-        });
-
-        player.on('seeking', function() {
-            var currentTime = player.currentTime();
-            if (currentTime < startTime || currentTime > endTime) {
-                player.currentTime(startTime);
-                player.pause();
-            }
-        });
-
-        player.on('loadedmetadata', function() {
-            // Adjust the duration display
-            var durationDisplay = player.controlBar.durationDisplay;
-            if (durationDisplay) {
-                durationDisplay.el().textContent = '1:00';
-            }
-
-            // Adjust the remaining time display
-            var remainingTimeDisplay = player.controlBar.remainingTimeDisplay;
-            if (remainingTimeDisplay) {
-                remainingTimeDisplay.el().textContent = '-1:00';
-            }
-
-            // Limit the progress bar to the 1-minute range
-            var seekBar = player.controlBar.progressControl.seekBar;
-            if (seekBar) {
-                seekBar.update = function() {
-                    var progress = (player.currentTime() - startTime) / duration;
-                    seekBar.el().style.width = (progress * 100) + '%';
-                };
-            }
-        });
-    }
-
-    // Apply the time range limitation after the player is ready
     player.ready(function() {
-        limitTimeRange();
-    });
+      var startTime = 20; // 3 minutes in seconds
+      var endTime = 30; // 4 minutes in seconds
+      var duration = endTime - startTime;
 
+      // Start playback at the 3-minute mark
+      player.currentTime(startTime);
+
+      // Update the progress bar
+      player.on('timeupdate', function() {
+        var currentTime = player.currentTime();
+        if (currentTime < startTime) {
+          player.currentTime(startTime);
+        } else if (currentTime > endTime) {
+          player.currentTime(endTime);
+          player.pause();
+        }
+      });
+
+      // Adjust the progress bar display
+      player.on('loadedmetadata', function() {
+        var duration = endTime - startTime;
+        var controlBar = player.controlBar;
+        var progressControl = controlBar.progressControl;
+        var seekBar = progressControl.seekBar;
+        var loadProgressBar = seekBar.loadProgressBar;
+        var playProgressBar = seekBar.playProgressBar;
+
+        player.duration(duration);
+
+        seekBar.on('mousedown', function(event) {
+          event.preventDefault();
+          var newTime = startTime + (event.offsetX / seekBar.width()) * duration;
+          player.currentTime(newTime);
+        });
+
+        seekBar.on('mousemove', function(event) {
+          if (event.buttons === 1) { // If the left mouse button is pressed
+            var newTime = startTime + (event.offsetX / seekBar.width()) * duration;
+            player.currentTime(newTime);
+          }
+        });
+
+        seekBar.on('click', function(event) {
+          event.preventDefault();
+          var newTime = startTime + (event.offsetX / seekBar.width()) * duration;
+          player.currentTime(newTime);
+        });
+
+        // Update the load and play progress bars
+        player.on('timeupdate', function() {
+          var currentTime = player.currentTime();
+          var progress = (currentTime - startTime) / duration;
+          playProgressBar.el().style.transform = 'scaleX(' + progress + ')';
+          loadProgressBar.el().style.transform = 'scaleX(' + progress + ')';
+        });
+      });
+    });
   </script>
 </body>
 </html>
